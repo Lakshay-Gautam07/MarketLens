@@ -2,6 +2,7 @@
 
 const mongoose = require('mongoose');
 const { WeeklyReport } = require('../models');
+const { generateWeeklyReport } = require('../services/reportService');
 
 /**
  * GET /api/reports
@@ -70,7 +71,36 @@ const getReportById = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/reports/generate
+ * Generate a weekly report for a specified week using Gemini AI.
+ * Body: { weekStart: "YYYY-MM-DD", weekEnd: "YYYY-MM-DD" }
+ */
+const generateReport = async (req, res, next) => {
+  try {
+    const { weekStart, weekEnd } = req.body;
+
+    if (!weekStart) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'weekStart is required (e.g. "2026-09-07" or ISO date string)',
+      });
+    }
+
+    const report = await generateWeeklyReport({ weekStart, weekEnd });
+
+    return res.status(201).json({
+      status: 'ok',
+      message: 'Weekly intelligence report generated successfully',
+      data: report,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getReports,
   getReportById,
+  generateReport,
 };

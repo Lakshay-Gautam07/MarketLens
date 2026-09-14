@@ -54,6 +54,7 @@ export const api = {
   reports: {
     getAll: (params) => apiClient.get('/reports', { params }),
     getById: (id) => apiClient.get(`/reports/${id}`),
+    generate: (data) => apiClient.post('/reports/generate', data),
   },
 
   // System Health
