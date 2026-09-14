@@ -271,14 +271,78 @@ const seed = async () => {
     },
   ];
 
+  // Also include historical snapshots to support pricing trend intelligence and deltas over time
+  const historicalPricingData = [
+    // Notion 30 days prior (Plus was $8, Business was $15 before price hike)
+    {
+      competitorId: competitorIdMap['Notion'],
+      currency: 'USD',
+      capturedAt: new Date('2026-08-15T10:00:00.000Z'),
+      plans: [
+        { name: 'Free', price: 0, billingPeriod: 'monthly', isFree: true, features: ['Collaborative workspace', 'Basic page analytics', '7 day page history'] },
+        { name: 'Plus', price: 8, billingPeriod: 'monthly', features: ['Unlimited blocks', 'Unlimited file uploads', '30 day page history', 'Up to 50 guests'] },
+        { name: 'Business', price: 15, billingPeriod: 'monthly', features: ['SAML SSO', 'Private teamspaces', 'Bulk export', '90 day page history'] },
+        { name: 'Enterprise', price: null, billingPeriod: 'custom', isEnterprise: true, features: ['SCIM user provisioning', 'Audit log', 'Dedicated success manager'] },
+      ],
+    },
+    // Notion 90 days prior (baseline)
+    {
+      competitorId: competitorIdMap['Notion'],
+      currency: 'USD',
+      capturedAt: new Date('2026-06-15T10:00:00.000Z'),
+      plans: [
+        { name: 'Free', price: 0, billingPeriod: 'monthly', isFree: true, features: ['Collaborative workspace', 'Basic page analytics', '7 day page history'] },
+        { name: 'Plus', price: 8, billingPeriod: 'monthly', features: ['Unlimited blocks', 'Unlimited file uploads', '30 day page history'] },
+        { name: 'Business', price: 15, billingPeriod: 'monthly', features: ['SAML SSO', 'Private teamspaces', 'Bulk export'] },
+        { name: 'Enterprise', price: null, billingPeriod: 'custom', isEnterprise: true, features: ['Dedicated success manager'] },
+      ],
+    },
+    // ClickUp 45 days prior (Unlimited was $5 before increase to $7)
+    {
+      competitorId: competitorIdMap['ClickUp'],
+      currency: 'USD',
+      capturedAt: new Date('2026-07-30T10:00:00.000Z'),
+      plans: [
+        { name: 'Free Forever', price: 0, billingPeriod: 'monthly', isFree: true, features: ['100MB storage', 'Unlimited tasks', 'Collaborative docs'] },
+        { name: 'Unlimited', price: 5, billingPeriod: 'monthly', features: ['Unlimited storage', 'Unlimited integrations', 'Dashboards'] },
+        { name: 'Business', price: 12, billingPeriod: 'monthly', features: ['Google SSO', 'Unlimited teams', 'Custom exporting'] },
+        { name: 'Enterprise', price: null, billingPeriod: 'custom', isEnterprise: true, features: ['White labeling', 'Enterprise API', 'SSO'] },
+      ],
+    },
+    // Linear 60 days prior (Prices stable $8 and $14)
+    {
+      competitorId: competitorIdMap['Linear'],
+      currency: 'USD',
+      capturedAt: new Date('2026-07-15T10:00:00.000Z'),
+      plans: [
+        { name: 'Free', price: 0, billingPeriod: 'monthly', isFree: true, features: ['Unlimited members', '250 active issues', 'Integrations with GitHub & GitLab'] },
+        { name: 'Standard', price: 8, billingPeriod: 'monthly', features: ['Unlimited issues', 'Admin roles', 'Guest accounts', 'Issue templates'] },
+        { name: 'Plus', price: 14, billingPeriod: 'monthly', features: ['Linear Insights', 'Customer requests', 'SLA management', 'Zendesk sync'] },
+        { name: 'Enterprise', price: null, billingPeriod: 'custom', isEnterprise: true, features: ['SAML 2.0 / Okta SCIM', 'Advanced security'] },
+      ],
+    },
+  ];
+
   for (const p of pricingData) {
     if (p.competitorId) {
+      // Upsert current snapshot (captured today)
       await PricingSnapshot.findOneAndUpdate(
-        { competitorId: p.competitorId },
-        { $set: { ...p, capturedAt: new Date() } },
+        { competitorId: p.competitorId, capturedAt: { $gte: new Date('2026-09-01T00:00:00.000Z') } },
+        { $set: { ...p, capturedAt: new Date('2026-09-14T09:00:00.000Z') } },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
-      console.log(`   ✔  Pricing snapshot recorded`);
+      console.log(`   ✔  Current pricing snapshot recorded for competitor ${p.competitorId}`);
+    }
+  }
+
+  for (const hp of historicalPricingData) {
+    if (hp.competitorId) {
+      await PricingSnapshot.findOneAndUpdate(
+        { competitorId: hp.competitorId, capturedAt: hp.capturedAt },
+        { $set: hp },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      console.log(`   ✔  Historical snapshot recorded for competitor ${hp.competitorId} (${hp.capturedAt.toISOString().slice(0, 10)})`);
     }
   }
 
